@@ -77,9 +77,9 @@ ARCHITECTURE myarch OF kasumi IS
 	);
 
 	FUNCTION "rol" (SIGNAL input:STD_LOGIC_VECTOR(15 DOWNTO 0); shiftAmount:INTEGER) RETURN STD_LOGIC_VECTOR IS
-		VARIABLE result : STD_LOGIC_VECTOR(15 DOWNTO 0);
+		VARIABLE result, a ,b : STD_LOGIC_VECTOR(15 DOWNTO 0);
 	BEGIN
-		result := input(shiftAmount DOWNTO 0) & input(15 DOWNTO shiftAmount + 1);
+		result := input((16 - shiftAmount) - 1 DOWNTO 0) & input(15 DOWNTO (16 - shiftAmount));
 		RETURN result;
 	
 	END "rol";
