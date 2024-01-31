@@ -11,18 +11,16 @@ ENTITY kasumi IS
 		  );
 END kasumi;
 ARCHITECTURE myarch OF kasumi IS 
-	TYPE state IS (initial_state, S1, S2, S3, S4, S5, S6, S7, S8);
-	SIGNAL cur_state : state := S8;
+	TYPE state IS (TEMP, initial_state, S1, S2, S3, S4, S5, S6, S7, S8);
+	SIGNAL cur_state : state;
 	SIGNAL nxt_state : state;
 	SIGNAL regleft, regright : STD_LOGIC_VECTOR(31 DOWNTO 0);
 	TYPE matrix IS ARRAY (0 TO 7) OF STD_LOGIC_VECTOR(15 DOWNTO 0);
 	TYPE matrix_2d_for_s7 IS ARRAY (0 TO 7, 15 DOWNTO 0) OF INTEGER;
 	TYPE matrix_2d_for_s9 IS ARRAY (0 TO 31, 15 DOWNTO 0) OF INTEGER;
+
+	SIGNAL FO,FL     : STD_LOGIC_VECTOR(31 DOWNTO 0) := (OTHERS => '0');
 	
-	SIGNAL k : matrix;
-	SIGNAL c : matrix;
-	
-	SIGNAL kaprim : matrix;
 	SIGNAL KL1 : matrix;
 	SIGNAL KL2 : matrix;
 	SIGNAL KO1 : matrix;
@@ -95,7 +93,11 @@ BEGIN
 	PROCESS (cur_state)
 		VARIABLE rightinp   : STD_LOGIC_VECTOR(31 DOWNTO 0);
 		VARIABLE leftinp    : STD_LOGIC_VECTOR(31 DOWNTO 0);
-		VARIABLE FL, FO     : STD_LOGIC_VECTOR(31 DOWNTO 0) := (OTHERS => '0');
+		-- VARIABLE FL, FO     : STD_LOGIC_VECTOR(31 DOWNTO 0) := (OTHERS => '0');
+		-- VARIABLE FL     : STD_LOGIC_VECTOR(31 DOWNTO 0) := (OTHERS => '0');
+		VARIABLE k : matrix := (others => (others => '0'));
+		VARIABLE c : matrix;
+	
 		VARIABLE FI         : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
 		VARIABLE FLright, FLleft : STD_LOGIC_VECTOR(15 DOWNTO 0) := (OTHERS => '0');
 
@@ -113,31 +115,33 @@ BEGIN
 		VARIABLE s9boxrox : INTEGER;
 		VARIABLE s9boxcol : INTEGER;
 
+		VARIABLE kaprim : matrix;
+
 	BEGIN 
 		CASE cur_state IS 
 			WHEN initial_state =>
 				--k matrix
-				k(0) <= key(127 DOWNTO 112);
-				k(1) <= key(111 DOWNTO 96);
-				k(2) <= key(95  DOWNTO 80);
-				k(3) <= key(79  DOWNTO 64);
-				k(4) <= key(63  DOWNTO 48);
-				k(5) <= key(47  DOWNTO 32);
-				k(6) <= key(31  DOWNTO 16);
-				k(7) <= key(15  DOWNTO 0);
+				k(0) := key(127 DOWNTO 112);
+				k(1) := key(111 DOWNTO 96);
+				k(2) := key(95  DOWNTO 80);
+				k(3) := key(79  DOWNTO 64);
+				k(4) := key(63  DOWNTO 48);
+				k(5) := key(47  DOWNTO 32);
+				k(6) := key(31  DOWNTO 16);
+				k(7) := key(15  DOWNTO 0);
 				--c matix
-				c(0) <= x"0123";
-				c(1) <= x"4567";
-				c(2) <= x"89AB";
-				c(3) <= x"CDEF";
-				c(4) <= x"FEDC";
-				c(5) <= x"BA98";
-				c(6) <= x"7654";
-				c(7) <= x"3210";
+				c(0) := x"0123";
+				c(1) := x"4567";
+				c(2) := x"89AB";
+				c(3) := x"CDEF";
+				c(4) := x"FEDC";
+				c(5) := x"BA98";
+				c(6) := x"7654";
+				c(7) := x"3210";
 			
 				--kaprim matrix
 				FOR i IN 0 TO 7 LOOP 
-					kaprim(i) <= k(i) XOR c(i); 
+					kaprim(i) := k(i) XOR c(i); 
 				END LOOP;
 			
 				--KL1 matrix
@@ -150,7 +154,7 @@ BEGIN
 					KL2(i) <= kaprim((i+2) MOD 8);
 				END LOOP;
 				
-				--KO1 matrix
+				--KO1 matrix	
 				FOR i IN 0 TO 7 LOOP
 					KO1(i) <= k((i+1) MOD 8) rol 5;
 				END LOOP;
@@ -187,7 +191,8 @@ BEGIN
 				leftinp  := regleft;
 				rightinp := regright;
 				-- FL function
-				FLleft := leftinp(31 DOWNTO 16); FLright := leftinp(15 DOWNTO 0);
+				FLleft := leftinp(31 DOWNTO 16); 
+				FLright := leftinp(15 DOWNTO 0);
 				temp15left  := FLleft AND KL1(0);
 				temp15leftcopy  := FLleft;
 				temp15left  := temp15left rol 1;
@@ -196,7 +201,7 @@ BEGIN
 				temp15right := temp15right OR KL2(0);
 				temp15right := temp15right rol 1;
 				temp15leftcopy  := temp15leftcopy XOR temp15right;
-				FL := temp15leftcopy & temp15rightcopy;
+				FL <= temp15leftcopy & temp15rightcopy;
 				
 				-- FO function
 				FOleft := FL(31 DOWNTO 16); FOright := FL(15 DOWNTO 0);
@@ -272,7 +277,7 @@ BEGIN
 				FI := FIright & FIleft;
 				
 				
-				FO := FOright & (FI XOR FOright);
+				FO <= FOright & (FI XOR FOright);
 				
 				temp32 := leftinp;
 				leftinp  := FO XOR rightinp;
@@ -357,7 +362,7 @@ BEGIN
 				FI := FIright & FIleft;
 				
 				
-				FO := FOright & (FI XOR FOright);
+				FO <= FOright & (FI XOR FOright);
 				
 				-- FL function
 				FLleft := FO(31 DOWNTO 16); FLright := FO(15 DOWNTO 0);
@@ -369,7 +374,7 @@ BEGIN
 				temp15right := temp15right OR KL2(1);
 				temp15right := temp15right rol 1;
 				temp15leftcopy  := temp15leftcopy XOR temp15right;
-				FL := temp15leftcopy & temp15rightcopy;
+				FL <= temp15leftcopy & temp15rightcopy;
 				
 				temp32 := leftinp;
 				leftinp  := FL XOR rightinp;
@@ -390,7 +395,7 @@ BEGIN
 				temp15right := temp15right OR KL2(2);
 				temp15right := temp15right rol 1;
 				temp15leftcopy  := temp15leftcopy XOR temp15right;
-				FL := temp15leftcopy & temp15rightcopy;
+				FL <= temp15leftcopy & temp15rightcopy;
 				
 				-- FO function
 				FOleft := FL(31 DOWNTO 16); FOright := FL(15 DOWNTO 0);
@@ -466,7 +471,7 @@ BEGIN
 				FI := FIright & FIleft;
 				
 				
-				FO := FOright & (FI XOR FOright);
+				FO <= FOright & (FI XOR FOright);
 				
 				temp32 := leftinp;
 				leftinp  := FO XOR rightinp;
@@ -552,7 +557,7 @@ BEGIN
 				FI := FIright & FIleft;
 				
 				
-				FO := FOright & (FI XOR FOright);
+				FO <= FOright & (FI XOR FOright);
 				
 				-- FL function
 				FLleft := FO(31 DOWNTO 16); FLright := FO(15 DOWNTO 0);
@@ -564,7 +569,7 @@ BEGIN
 				temp15right := temp15right OR KL2(3);
 				temp15right := temp15right rol 1;
 				temp15leftcopy  := temp15leftcopy XOR temp15right;
-				FL := temp15leftcopy & temp15rightcopy;
+				FL <= temp15leftcopy & temp15rightcopy;
 				
 				temp32 := leftinp;
 				leftinp  := FL XOR rightinp;
@@ -586,7 +591,7 @@ BEGIN
 				temp15right := temp15right OR KL2(4);
 				temp15right := temp15right rol 1;
 				temp15leftcopy  := temp15leftcopy XOR temp15right;
-				FL := temp15leftcopy & temp15rightcopy;
+				FL <= temp15leftcopy & temp15rightcopy;
 				
 				-- FO function
 				FOleft := FL(31 DOWNTO 16); FOright := FL(15 DOWNTO 0);
@@ -662,7 +667,7 @@ BEGIN
 				FI := FIright & FIleft;
 				
 				
-				FO := FOright & (FI XOR FOright);
+				FO <= FOright & (FI XOR FOright);
 				
 				temp32 := leftinp;
 				leftinp  := FO XOR rightinp;
@@ -748,7 +753,7 @@ BEGIN
 				FI := FIright & FIleft;
 				
 				
-				FO := FOright & (FI XOR FOright);
+				FO <= FOright & (FI XOR FOright);
 				
 				-- FL function
 				FLleft := FO(31 DOWNTO 16); FLright := FO(15 DOWNTO 0);
@@ -760,7 +765,7 @@ BEGIN
 				temp15right := temp15right OR KL2(5);
 				temp15right := temp15right rol 1;
 				temp15leftcopy  := temp15leftcopy XOR temp15right;
-				FL := temp15leftcopy & temp15rightcopy;
+				FL <= temp15leftcopy & temp15rightcopy;
 				
 				temp32 := leftinp;
 				leftinp  := FL XOR rightinp;
@@ -781,7 +786,7 @@ BEGIN
 				temp15right := temp15right OR KL2(6);
 				temp15right := temp15right rol 1;
 				temp15leftcopy  := temp15leftcopy XOR temp15right;
-				FL := temp15leftcopy & temp15rightcopy;
+				FL <= temp15leftcopy & temp15rightcopy;
 				
 				-- FO function
 				FOleft := FL(31 DOWNTO 16); FOright := FL(15 DOWNTO 0);
@@ -857,7 +862,7 @@ BEGIN
 				FI := FIright & FIleft;
 				
 				
-				FO := FOright & (FI XOR FOright);
+				FO <= FOright & (FI XOR FOright);
 				
 				temp32 := leftinp;
 				leftinp  := FO XOR rightinp;
@@ -943,7 +948,7 @@ BEGIN
 				FI := FIright & FIleft;
 				
 				
-				FO := FOright & (FI XOR FOright);
+				FO <= FOright & (FI XOR FOright);
 				
 				-- FL function
 				FLleft := FO(31 DOWNTO 16); FLright := FO(15 DOWNTO 0);
@@ -955,13 +960,14 @@ BEGIN
 				temp15right := temp15right OR KL2(7);
 				temp15right := temp15right rol 1;
 				temp15leftcopy  := temp15leftcopy XOR temp15right;
-				FL := temp15leftcopy & temp15rightcopy;
+				FL <= temp15leftcopy & temp15rightcopy;
 				
 				temp32 := leftinp;
 				leftinp  := FL XOR rightinp;
 				rightinp := temp32;
 				
 				outp <= leftinp & rightinp;
+			WHEN TEMP => NULL;
 		END CASE;
 	END PROCESS;
 	
