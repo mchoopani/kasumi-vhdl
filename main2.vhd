@@ -2,15 +2,15 @@ LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.std_logic_unsigned.ALL;
 USE IEEE.numeric_std.ALL;
-ENTITY kasumi IS
+ENTITY reg IS
 	PORT (
 		  clk, rst : IN STD_LOGIC;
 		  inp      	: IN  STD_LOGIC_VECTOR(63 DOWNTO 0);
 		  key       : IN  STD_LOGIC_VECTOR(127 DOWNTO 0);
 		  outp 		: OUT STD_LOGIC_VECTOR(63 DOWNTO 0)
 		  );
-END kasumi;
-ARCHITECTURE myarch OF kasumi IS 
+END reg;
+ARCHITECTURE myarch OF reg IS 
 	FUNCTION rotleft (input:STD_LOGIC_VECTOR(15 DOWNTO 0); shiftAmount:INTEGER) RETURN STD_LOGIC_VECTOR IS
 		VARIABLE result, a ,b : STD_LOGIC_VECTOR(15 DOWNTO 0);
 	BEGIN
