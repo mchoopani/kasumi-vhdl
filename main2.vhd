@@ -2,15 +2,15 @@ LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
 USE ieee.std_logic_unsigned.ALL;
 USE IEEE.numeric_std.ALL;
-ENTITY reg IS
+ENTITY kasumi IS
 	PORT (
 		  clk, rst : IN STD_LOGIC;
 		  inp      	: IN  STD_LOGIC_VECTOR(63 DOWNTO 0);
 		  key       : IN  STD_LOGIC_VECTOR(127 DOWNTO 0);
 		  outp 		: OUT STD_LOGIC_VECTOR(63 DOWNTO 0)
 		  );
-END reg;
-ARCHITECTURE myarch OF reg IS 
+END kasumi;
+ARCHITECTURE myarch OF kasumi IS 
 	FUNCTION rotleft (input:STD_LOGIC_VECTOR(15 DOWNTO 0); shiftAmount:INTEGER) RETURN STD_LOGIC_VECTOR IS
 		VARIABLE result, a ,b : STD_LOGIC_VECTOR(15 DOWNTO 0);
 	BEGIN
@@ -94,13 +94,13 @@ ARCHITECTURE myarch OF reg IS
 		ki2 := KI(31 downto 16);
 		ki3 := KI(15 downto 0);
 
-		r1 := FI(l0 xor ko1, ki1);
+		r1 := FI(l0 xor ko1, ki1) xor r0;
 		l1 := r0;
 
-		r2 := FI(l1 xor ko2, ki2);
+		r2 := FI(l1 xor ko2, ki2) xor r1;
 		l2 := r1;
 
-		r3 := FI(l2 xor ko3, ki3);
+		r3 := FI(l2 xor ko3, ki3) xor r2;
 		l3 := r2;
 
 		return l3 & r3;
@@ -144,15 +144,22 @@ BEGIN
 	process( clk )
 		variable k1, k2, k3, k4, k5, k6, k7, k8 : std_logic_vector(15 downto 0);
 		variable k1p, k2p, k3p, k4p, k5p, k6p, k7p, k8p : std_logic_vector(15 downto 0);
-		variable KL1, KL2, KL3, KL4, KL5, KL6, KL7, KL8 : std_logic_vector(31 downto 0);
-		variable KO1, KO2, KO3, KO4, KO5, KO6, KO7, KO8 : std_logic_vector(47 downto 0);
-		variable KI1, KI2, KI3, KI4, KI5, KI6, KI7, KI8 : std_logic_vector(47 downto 0);
-		variable l0, l1, l2, l3, l4, l5, l6, l7, l8 : std_logic_vector(31 downto 0) ;
-		variable r0, r1, r2, r3, r4, r5, r6, r7, r8 : std_logic_vector(31 downto 0) ;
+		-- variable KL1, KL2, KL3, KL4, KL5, KL6, KL7, KL8 : std_logic_vector(31 downto 0);
+		type matrix_48 is array (0 to  7) of std_logic_vector(47 downto 0);
+		variable KO, KI : matrix_48;
+		type matrix_32 is array (0 to  7) of std_logic_vector(31 downto 0);
+		variable KL : matrix_32;
+		-- variable KO1, KO2, KO3, KO4, KO5, KO6, KO7, KO8 : std_logic_vector(47 downto 0);
+		-- variable KI1, KI2, KI3, KI4, KI5, KI6, KI7, KI8 : std_logic_vector(47 downto 0);
+		-- variable l0, l1, l2, l3, l4, l5, l6, l7, l8 : std_logic_vector(31 downto 0) ;
+		-- variable r0, r1, r2, r3, r4, r5, r6, r7, r8 : std_logic_vector(31 downto 0) ;
+		variable l, r, temp : std_logic_vector(31 downto 0);
+		variable i : integer := 0;
 	begin
 		if (clk'event and clk = '1') then
 			if (rst = '0') then
 				outp <= x"0000000000000000";
+				i := 0;
 			else
 				k1 := key(127 downto 112);
 				k2 := key(111 downto 96);
@@ -172,62 +179,46 @@ BEGIN
 				k7p := k7 xor x"7654";
 				k8p := k8 xor x"3210";
 
-				KL1 := rotleft(k1, 1) & k3p;
-				KL2 := rotleft(k2, 1) & k4p;
-				KL3 := rotleft(k3, 1) & k5p;
-				KL4 := rotleft(k4, 1) & k6p;
-				KL5 := rotleft(k5, 1) & k7p;
-				KL6 := rotleft(k6, 1) & k8p;
-				KL7 := rotleft(k7, 1) & k1p;
-				KL8 := rotleft(k8, 1) & k2p;
+				KL(0) := rotleft(k1, 1) & k3p;
+				KL(1) := rotleft(k2, 1) & k4p;
+				KL(2) := rotleft(k3, 1) & k5p;
+				KL(3) := rotleft(k4, 1) & k6p;
+				KL(4) := rotleft(k5, 1) & k7p;
+				KL(5) := rotleft(k6, 1) & k8p;
+				KL(6) := rotleft(k7, 1) & k1p;
+				KL(7) := rotleft(k8, 1) & k2p;
 
-				KO1 := rotleft(k2, 5) & rotleft (k6, 8) & rotleft(k7, 13);
-				KO2 := rotleft(k3, 5) & rotleft (k7, 8) & rotleft(k8, 13);
-				KO3 := rotleft(k4, 5) & rotleft (k8, 8) & rotleft(k1, 13);
-				KO4 := rotleft(k5, 5) & rotleft (k1, 8) & rotleft(k2, 13);
-				KO5 := rotleft(k6, 5) & rotleft (k2, 8) & rotleft(k3, 13);
-				KO6 := rotleft(k7, 5) & rotleft (k3, 8) & rotleft(k4, 13);
-				KO7 := rotleft(k8, 5) & rotleft (k4, 8) & rotleft(k5, 13);
-				KO8 := rotleft(k1, 5) & rotleft (k5, 8) & rotleft(k6, 13);
+				KO(0) := rotleft(k2, 5) & rotleft (k6, 8) & rotleft(k7, 13);
+				KO(1) := rotleft(k3, 5) & rotleft (k7, 8) & rotleft(k8, 13);
+				KO(2) := rotleft(k4, 5) & rotleft (k8, 8) & rotleft(k1, 13);
+				KO(3) := rotleft(k5, 5) & rotleft (k1, 8) & rotleft(k2, 13);
+				KO(4) := rotleft(k6, 5) & rotleft (k2, 8) & rotleft(k3, 13);
+				KO(5) := rotleft(k7, 5) & rotleft (k3, 8) & rotleft(k4, 13);
+				KO(6) := rotleft(k8, 5) & rotleft (k4, 8) & rotleft(k5, 13);
+				KO(7) := rotleft(k1, 5) & rotleft (k5, 8) & rotleft(k6, 13);
 
-				KI1 := k5p & k4p & k8p;
-				KI2 := k6p & k5p & k1p;
-				KI3 := k7p & k6p & k2p;
-				KI4 := k8p & k7p & k3p;
-				KI5 := k1p & k8p & k4p;
-				KI6 := k2p & k1p & k5p;
-				KI7 := k3p & k2p & k6p;
-				KI8 := k4p & k3p & k7p;
+				KI(0) := k5p & k4p & k8p;
+				KI(1) := k6p & k5p & k1p;
+				KI(2) := k7p & k6p & k2p;
+				KI(3) := k8p & k7p & k3p;
+				KI(4) := k1p & k8p & k4p;
+				KI(5) := k2p & k1p & k5p;
+				KI(6) := k3p & k2p & k6p;
+				KI(7) := k4p & k3p & k7p;
 
-
-				r0 := inp(31 downto 0);
-				l0 := inp(63 downto 32);
-
-				r1 := l0;
-				l1 := r0 xor f(l0, KL1, KO1, KI1, 1);
-
-				r2 := l1;
-				l2 := r1 xor f(l1, KL2, KO2, KI2, 2);
-
-				r3 := l2;
-				l3 := r2 xor f(l2, KL3, KO3, KI3, 3);
-				
-				r4 := l3;
-				l4 := r3 xor f(l3, KL4, KO4, KI4, 4);
-				
-				r5 := l4;
-				l5 := r4 xor f(l4, KL5, KO5, KI5, 5);
-
-				r6 := l5;
-				l6 := r5 xor f(l5, KL6, KO6, KI6, 6);
-
-				r7 := l6;
-				l7 := r6 xor f(l6, KL7, KO7, KI7, 7);
-
-				r8 := l7;
-				l8 := r7 xor f(l7, KL8, KO8, KI8, 8);
-
-				outp <= l8 & r8;
+				if (i = 0) then
+					r := inp(31 downto 0);
+					l := inp(63 downto 32);
+					i := i + 1;
+				elsif (i /= 9) then
+					temp := l;
+					l := r xor f(l, KL(i-1), KO(i-1), KI(i-1), i);
+					r := temp;
+					if (i = 8) then
+						outp <= l & r;
+					end if;
+					i := i + 1;
+				end if;
 			end if;
 
 		end if;
