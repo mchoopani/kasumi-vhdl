@@ -25,4 +25,5 @@ BEGIN
 	rst_tb <= '0', '1' AFTER 11 ns;
 	inp_tb  <= x"9f8115571e526dad";
 	key_tb  <= x"4f1271c53d8e98504f1271c53d8e9850";
+	-- output should be: 0x550754615799b540
 END test;
