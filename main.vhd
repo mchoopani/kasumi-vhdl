@@ -79,7 +79,7 @@ ARCHITECTURE myarch OF kasumi IS
 
 	function FO(
 		input : std_logic_vector(31 downto 0);
-		KI, KO : std_logic_vector(47 downto 0)
+		KO, KI : std_logic_vector(47 downto 0)
 	) return std_logic_vector is
 		variable l0, l1, l2, l3, r0, r1, r2, r3, ko1, ko2, ko3, ki1, ki2, ki3 : std_logic_vector(15 downto 0);
 	begin
